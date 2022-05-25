@@ -1,10 +1,13 @@
+import pickle
 import pygame as pg
 from chess_piece import Piece
 from pprint import PrettyPrinter
 from pattern_of_pieces_movement import *
 from Piece_dict import piece_dict
 from color import Color
+from Network import Network
 pp = PrettyPrinter()
+
 
 class Main:
     def __init__(self):
@@ -26,8 +29,15 @@ class Main:
         # the mainloop
         self.running = True
 
+        # the manager of server
+        self.n = Network()
+
+        #
+        self.my_color = self.n.my_color()
+
         # whose is turn
         self.turn = Color()
+        self.turn.color = "w"
 
         # the type of pieces that clicked
         self.clicked_piece = " "
@@ -37,6 +47,8 @@ class Main:
 
         # the red square is a square that the piece can move
         self.red_square = []
+        # the game process if on its ok if off then someone lose
+        self.game = ("on", None)
 
     def draw_pieces(self):
         for x, lst in enumerate(self.board):
@@ -131,6 +143,7 @@ class Main:
             self.red_square = []
             self.is_red = False
             self.turn.swap()
+            self.send_new_board()
         else:
             self.red_square = []
             self.is_red = False
@@ -150,18 +163,22 @@ class Main:
             pg.time.delay(5000)
             self.reset_board()
 
+    def send_new_board(self):
+        self.n.send(("new", self.board, self.turn.get()))
+
     def mainloop(self):
         self.reset_board()
+        self.send_new_board()
         while self.running:
             self.screen.fill("white")
             self.draw_board()
             self.do_markup()
             self.draw_pieces()
+            self.board, self.turn = self.n.check_the_data()
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     self.running = False
                 if event.type == pg.MOUSEBUTTONDOWN:
-                    # pp.pprint(self.board)
                     self.check_the_lost()
                     pos = pg.mouse.get_pos()
                     x = pos[0] // self.size
@@ -169,12 +186,12 @@ class Main:
                     try:
                         if self.is_red:
                             self.check_is_move()
-                        elif self.board[x][y][0] == self.turn.get():
+                        elif self.board[x][y][0] == self.turn.get() and self.my_color == self.turn.get():
                             self.find_the_red_square()
                         else:
                             self.red_square = []
                             self.is_red = False
-                    except:
+                    except Exception as e:
                         self.red_square = []
                         self.is_red = False
             pg.display.update()

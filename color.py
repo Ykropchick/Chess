@@ -10,3 +10,4 @@ class Color:
             self.color = "b"
         else:
             self.color = "w"
+        return self.color

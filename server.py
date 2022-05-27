@@ -15,10 +15,10 @@ s.listen(3)
 
 turn = Color()
 board = []
-
+game = ("on", None)
 
 def client_thread(conn):
-    global connections, turn, board
+    global connections, turn, board, game
     if connections == 0:
         conn.send(pickle.dumps("w"))
     else:
@@ -30,13 +30,14 @@ def client_thread(conn):
             if not data:
                 break
             elif data == "check":
-                conn.send(pickle.dumps((board, turn)))
+                conn.send(pickle.dumps((board, turn, game)))
             elif data[0] == "new":
                 board = data[1]
                 turn.color = data[2]
+                game = data[3]
                 conn.send(pickle.dumps("Received"))
             else:
-                conn.send(pickle.dumps((board, turn)))
+                conn.send(pickle.dumps((board, turn, game)))
 
         except Exception as e:
             print(str(e))

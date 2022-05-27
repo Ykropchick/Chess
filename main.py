@@ -32,7 +32,7 @@ class Main:
         # the manager of server
         self.n = Network()
 
-        #
+        # the color that I played, the first player that connected to server is always white
         self.my_color = self.n.my_color()
 
         # whose is turn
@@ -47,7 +47,9 @@ class Main:
 
         # the red square is a square that the piece can move
         self.red_square = []
-        # the game process if on its ok if off then someone lose
+        # the game process indicator
+        # 1st argument :if the "on" that the game is continues if "off" that someone lose
+        # 2nd argument :if the first argument == "on" that None else the "w" or "b" it depends on who wins
         self.game = ("on", None)
 
     def draw_pieces(self):
@@ -149,22 +151,41 @@ class Main:
             self.is_red = False
 
     def check_the_lost(self):
+        # check if lost and send to server
         white_king = any("wK" in i for i in self.board)
         black_king = any("bK" in i for i in self.board)
+        if not white_king:
+            self.game = ("off", "w")
+        if not black_king:
+            self.game = ("off", "b")
+        self.send_new_board()
+
+    def lost(self):
+        # check if someone lost and displayed it
+        white_king = True if self.game[1] == "b" else False
+        black_king = True if self.game[1] == "w" else False
         font = pg.font.Font(None, 50)
         if not white_king:
             text = font.render("The White lost", True, "red")
             self.screen.blit(text, (self.Width // 2, self.Height // 2))
-            pg.time.delay(5000)
+            pg.display.update()
             self.reset_board()
+            self.game = ("on", None)
+            self.turn.color = "white"
+            self.send_new_board()
+            # pg.time.delay(500)
         if not black_king:
             text = font.render("The Black lost", True, "red")
             self.screen.blit(text, (self.Width // 2, self.Height // 2))
-            pg.time.delay(5000)
+            self.game = ("on", None)
             self.reset_board()
+            self.turn.color = "white"
+            self.send_new_board()
+            # pg.time.delay(500)
 
     def send_new_board(self):
-        self.n.send(("new", self.board, self.turn.get()))
+        # send information to server if someone updated
+        self.n.send(("new", self.board, self.turn.get(), self.game))
 
     def mainloop(self):
         self.reset_board()
@@ -174,7 +195,9 @@ class Main:
             self.draw_board()
             self.do_markup()
             self.draw_pieces()
-            self.board, self.turn = self.n.check_the_data()
+            self.board, self.turn, self.game = self.n.check_the_data()
+            if self.game[0] == "off":
+                self.lost()
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     self.running = False
@@ -186,6 +209,7 @@ class Main:
                     try:
                         if self.is_red:
                             self.check_is_move()
+                        # check if its our turn and if we clicked on our pieces
                         elif self.board[x][y][0] == self.turn.get() and self.my_color == self.turn.get():
                             self.find_the_red_square()
                         else:
